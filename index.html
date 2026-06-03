@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>WeatherDash – Live Weather</title>
+    <meta name="description" content="Beautiful real-time weather dashboard with hourly forecasts, UV index, wind direction and city favorites.">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="app-shell">
+
+    <!-- Blobs (decorative) -->
+    <div id="blob-1" class="blob blob-1"></div>
+    <div id="blob-2" class="blob blob-2"></div>
+    <div id="blob-3" class="blob blob-3"></div>
+
+    <!-- ===== STICKY HEADER ===== -->
+    <header class="app-header">
+        <button id="geo-btn" class="icon-btn" title="Use my location">
+            <i class="fas fa-location-crosshairs"></i>
+        </button>
+
+        <div class="header-center">
+            <p id="city-name" class="header-city">WeatherDash</p>
+            <p id="current-date" class="header-date">--</p>
+        </div>
+
+        <div class="header-actions">
+            <div class="unit-toggle">
+                <button id="btn-celsius"    class="unit-btn active">°C</button>
+                <button id="btn-fahrenheit" class="unit-btn">°F</button>
+            </div>
+            <button id="search-toggle" class="icon-btn" aria-label="Search city">
+                <i class="fas fa-search"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- ===== SEARCH OVERLAY ===== -->
+    <div id="search-overlay" class="search-overlay hidden">
+        <div class="search-inner">
+            <div class="search-row">
+                <i class="fas fa-search text-gray-400 shrink-0 text-sm"></i>
+                <input type="text" id="search-input"
+                       inputmode="search"
+                       placeholder="Search city…"
+                       autocomplete="off"
+                       class="search-input-field">
+                <button id="search-btn" class="search-go-btn" aria-label="Go">
+                    <i class="fas fa-arrow-right text-xs"></i>
+                </button>
+                <button id="search-close" class="icon-btn-sm" aria-label="Close search">
+                    <i class="fas fa-times text-sm"></i>
+                </button>
+            </div>
+            <div id="autocomplete-list" class="autocomplete-dropdown hidden"></div>
+        </div>
+    </div>
+
+    <!-- ===== FAVORITES BAR ===== -->
+    <div id="favorites-bar" class="fav-bar hidden">
+        <i class="fas fa-star text-yellow-400 text-xs shrink-0 mt-0.5"></i>
+        <div id="favorites-list" class="fav-scroll"></div>
+    </div>
+
+    <!-- ===== SKELETON LOADER ===== -->
+    <div id="loading" class="hidden loading-wrap">
+        <div class="sk-hero"></div>
+        <div class="sk-pills-row">
+            <div class="sk-pill"></div><div class="sk-pill"></div>
+            <div class="sk-pill"></div><div class="sk-pill"></div>
+            <div class="sk-pill"></div>
+        </div>
+        <div class="sk-card tall"></div>
+        <div class="sk-card"></div>
+    </div>
+
+    <!-- ===== ERROR BANNER ===== -->
+    <div id="error-message" class="error-banner hidden">
+        <i class="fas fa-exclamation-circle mr-2"></i>
+        <span id="error-text">City not found.</span>
+    </div>
+
+    <!-- ===== MAIN CONTENT ===== -->
+    <main id="weather-content" class="main-content hidden animate-fade-in">
+
+        <!-- HERO -->
+        <section class="hero-section">
+            <button id="fav-btn" class="fav-hero-btn" title="Save city">
+                <i class="fas fa-star"></i>
+            </button>
+            <i id="weather-icon" class="fas fa-cloud hero-icon floating-icon"></i>
+            <h1 id="current-temp" class="hero-temp">--°</h1>
+            <p id="weather-desc" class="hero-desc">--</p>
+            <div id="day-night-badge" class="day-night-badge hidden"></div>
+        </section>
+
+        <!-- QUICK-STAT PILLS (horizontal scroll) -->
+        <section class="pills-section">
+            <div class="pills-scroll" role="list">
+
+                <div class="stat-pill" role="listitem">
+                    <i class="fas fa-temperature-high text-orange-400 pill-icon"></i>
+                    <p class="pill-label">Feels Like</p>
+                    <p id="feels-like" class="pill-value">--°</p>
+                </div>
+
+                <div class="stat-pill" role="listitem">
+                    <i class="fas fa-tint text-blue-400 pill-icon"></i>
+                    <p class="pill-label">Humidity</p>
+                    <p id="humidity" class="pill-value">--%</p>
+                    <div class="mini-bar"><div id="humidity-bar" class="mini-fill" style="width:0%"></div></div>
+                </div>
+
+                <div class="stat-pill" role="listitem">
+                    <i class="fas fa-wind text-green-400 pill-icon"></i>
+                    <p class="pill-label">Wind</p>
+                    <p id="wind-speed" class="pill-value">--</p>
+                    <p id="wind-direction" class="pill-sub">--</p>
+                </div>
+
+                <div class="stat-pill" role="listitem">
+                    <i class="fas fa-radiation-alt text-yellow-300 pill-icon"></i>
+                    <p class="pill-label">UV Index</p>
+                    <p id="uv-index" class="pill-value">--</p>
+                    <p id="uv-label" class="pill-sub"></p>
+                </div>
+
+                <div class="stat-pill" role="listitem">
+                    <i class="fas fa-compress-arrows-alt text-purple-400 pill-icon"></i>
+                    <p class="pill-label">Pressure</p>
+                    <p id="pressure" class="pill-value">--</p>
+                </div>
+
+                <div class="stat-pill" role="listitem">
+                    <i class="fas fa-eye text-cyan-400 pill-icon"></i>
+                    <p class="pill-label">Visibility</p>
+                    <p id="visibility" class="pill-value">-- km</p>
+                </div>
+
+                <div class="stat-pill" role="listitem">
+                    <i class="fas fa-cloud-rain text-sky-400 pill-icon"></i>
+                    <p class="pill-label">Rain</p>
+                    <p id="precip-prob" class="pill-value">--%</p>
+                    <div class="mini-bar"><div id="precip-bar" class="mini-fill precip-grad" style="width:0%"></div></div>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- CARDS -->
+        <div class="cards-area">
+
+            <!-- SUNRISE / SUNSET -->
+            <div class="glass-card sun-card">
+                <div class="sun-row">
+                    <div class="sun-item">
+                        <i class="fas fa-sun text-yellow-400 text-xl"></i>
+                        <p class="sun-label">Sunrise</p>
+                        <p id="sunrise" class="sun-time">--:--</p>
+                    </div>
+                    <div class="sun-arc-wrap">
+                        <svg viewBox="0 0 120 60" class="sun-arc-svg" aria-hidden="true">
+                            <path d="M5,55 Q60,-10 115,55" fill="none"
+                                  stroke="rgba(251,191,36,0.25)" stroke-width="2"
+                                  stroke-dasharray="5 4"/>
+                        </svg>
+                        <i class="fas fa-circle-dot text-yellow-300 sun-dot"></i>
+                    </div>
+                    <div class="sun-item text-right">
+                        <i class="fas fa-moon text-indigo-400 text-xl"></i>
+                        <p class="sun-label">Sunset</p>
+                        <p id="sunset" class="sun-time">--:--</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- HOURLY CHART -->
+            <div class="glass-card chart-card">
+                <h2 class="section-title">
+                    <i class="fas fa-chart-line text-blue-400 mr-2"></i>24-Hour Forecast
+                </h2>
+                <div class="chart-wrap">
+                    <canvas id="hourly-chart"></canvas>
+                </div>
+            </div>
+
+            <!-- 7-DAY FORECAST -->
+            <div class="forecast-block">
+                <h2 class="section-title px-1">
+                    <i class="far fa-calendar-alt text-blue-400 mr-2"></i>7-Day Forecast
+                </h2>
+                <div id="forecast-container" class="forecast-scroll"></div>
+            </div>
+
+        </div><!-- /cards-area -->
+    </main>
+
+    <!-- ===== FOOTER ===== -->
+    <footer class="footer">
+        <p class="footer-text">Made by Caleb Amartey Amarh</p>
+    </footer>
+</div><!-- /app-shell -->
+
+<script src="script.js"></script>
+</body>
+</html>
